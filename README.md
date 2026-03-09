@@ -1,184 +1,125 @@
-<p align="center">
-  <h1 align="center">
-    LeHome Challenge 2026
-  </h1>
-  <h2 align="center">
-    Challenge on Garment Manipulation Skill Learning in Household Scenarios
-  </h2>
+# LeHome Challenge `just` 命令说明
 
-  <h3 align="center">
-    <a href="https://lehome-challenge.com/">Competition Website</a>
-  </h3>
-</p>
+本文档说明 `justfile` 里的 5 条核心命令，以及它们实际会执行的脚本行为。
 
-<div align="center">
+## 先决条件
 
-[![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
-[![Isaac Lab](https://img.shields.io/badge/Isaac%20Lab-2.3.1-green.svg)](https://isaac-sim.github.io/IsaacLab/main/index.html)
-[![LeRobot](https://img.shields.io/badge/LeRobot-0.4.2-yellow.svg)](https://github.com/huggingface/lerobot)
-[![License](https://img.shields.io/badge/license-Apache%202.0-red.svg)](LICENSE)
-[![ICRA](https://img.shields.io/badge/ICRA-2026-orange.svg)](https://2026.ieee-icra.org/program/competitions/)
+- 已安装 `just`（可通过 `just --list` 查看命令）
+- 在仓库根目录 `/root/data/lehome-challenge` 下执行
+- 建议使用可写 `~/.bashrc`、可执行 `apt/git/hf/uv` 的环境
 
-</div>
+## 命令总览
 
-## 📑 Table of Contents
+| 命令 | 实际执行 | 作用 |
+| --- | --- | --- |
+| `just vpn` | `bash start/step_vpn.sh` | 安装并配置 Clash for Linux 代理环境 |
+| `just s1` | `bash start/step1.sh` | 基础环境安装（`uv`、依赖、IsaacLab、LeHome 包、基础数据） |
+| `just s2` | `bash start/step2.sh` | 按官方步骤补全安装与数据下载 |
+| `just s3` | `bash start/step3.sh` | Shell 快捷命令、IsaacSim 授权、IsaacLab 路径软链接 |
+| `just save <版本号>` | `bash start/step_git.sh <版本号>` | 自动提交并打 Tag 推送到 GitHub |
 
-- [📑 Table of Contents](#-table-of-contents)
-- [🚀 Quick Start](#-quick-start)
-  - [1. Installation](#1-installation)
-    - [Use UV](#use-uv)
-    - [Use Docker](#use-docker)
-  - [2. Assets \& Data Preparation](#2-assets--data-preparation)
-    - [Download Simulation Assets](#download-simulation-assets)
-    - [Download Example Dataset](#download-example-dataset)
-    - [Collect Your Own Data](#collect-your-own-data)
-  - [3. Train](#3-train)
-    - [Quick Start](#quick-start)
-  - [4. Eval](#4-eval)
-    - [Common Options](#common-options)
-    - [Garment Test Configuration](#garment-test-configuration)
-- [📮 Submission](#-submission)
-- [🧩 Acknowledgments](#-acknowledgments)
+## 1) `just vpn`
 
-## 🚀 Quick Start
+执行脚本：`start/step_vpn.sh`
 
-> ⚠️ **IMPORTANT**: 
-> For Ubuntu version and GPU-related settings, please refer to the [IsaacSim 5.1.0 Documentation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/requirements.html). And the simulation currently only supports CPU devices.
+会做的事情：
 
-### 1. Installation
-We offer two installation methods: UV and Docker for submission and local evaluation.
+1. 尝试启用 `/public/bin/network_accelerate`（如果存在）。
+2. 重新克隆 `nelvko/clash-for-linux-install`。
+3. 修改安装脚本，去掉 `gh-proxy` 前缀。
+4. 写入 `.env`（包含内核版本、订阅地址、控制面板地址等）。
+5. 执行 `install.sh` 完成安装。
+6. 尝试关闭加速脚本 `/public/bin/network_accelerate_stop`（如果存在）。
 
-#### Use UV
+适用场景：网络需要代理加速，或你要重装 Clash 代理环境。
 
-The simulation environment is based on the IssacLab and LeRobot repositories; please refer to [UV installation guide](docs/installation.md).
+## 2) `just s1`
 
-#### Use Docker
+执行脚本：`start/step1.sh`
 
-The simulation environment is based on the IssacLab and LeRobot repositories; please refer to [Docker installation guide](docs/docker_installation.md).
+会做的事情：
 
-### 2. Assets & Data Preparation
+1. 可选安装系统图形依赖（脚本会交互询问，`y/N`）。
+2. 检查并安装 `uv`。
+3. 若当前不在仓库目录，会克隆 `lehome-official/lehome-challenge`。
+4. 执行 `uv sync` 安装 Python 依赖。
+5. 克隆 `third_party/IsaacLab`（如果不存在）。
+6. 在虚拟环境中执行：
+   - `./third_party/IsaacLab/isaaclab.sh -i none`
+   - `uv pip install -e ./source/lehome`
+   - `uv pip install "huggingface_hub[cli]"`
+7. 下载：
+   - `lehome/asset_challenge` 到 `Assets`
+   - `lehome/dataset_challenge_merged` 到 `Datasets/example`
 
-#### Download Simulation Assets
+适用场景：第一次完整初始化环境。
 
-Download the required simulation assets (scenes, objects, robots) from HuggingFace:
+## 3) `just s2`
 
-```bash
-# This creates the Assets/ directory with all required simulation resources
-hf download lehome/asset_challenge --repo-type dataset --local-dir Assets
-```
+执行脚本：`start/step2.sh`
 
-#### Download Example Dataset
+会做的事情（偏官方文档复刻）：
 
-We provide demonstrations for four types of garments. Download from HuggingFace:
+1. 自动定位到 `lehome-challenge` 目录。
+2. `source .venv/bin/activate` 激活虚拟环境。
+3. 再次执行 `./third_party/IsaacLab/isaaclab.sh -i none`。
+4. 再次执行 `uv pip install -e ./source/lehome`。
+5. 下载数据：
+   - `asset_challenge`
+   - `dataset_challenge_merged`
+   - `dataset_challenge`（包含 depth 信息）
 
-```bash
-hf download lehome/dataset_challenge_merged --repo-type dataset --local-dir Datasets/example
-```
+适用场景：在 `s1` 后补齐官方下载项，或重跑下载步骤。
 
-If you need depth information or individual data for each garment. Download from HuggingFace:
+## 4) `just s3`
 
-```bash
-hf download lehome/dataset_challenge --repo-type dataset --local-dir Datasets/example
-```
+执行脚本：`start/step3.sh`
 
-#### Collect Your Own Data
-For detailed instructions on teleoperation data collection and dataset processing, please refer to our [Dataset Collection and Processing Guide](docs/datasets.md) ( using SO101 Leader is strongly recommended).
+会做的事情：
 
-### 3. Train
+1. 建立缓存软链接：`~/.cache/uv -> /root/data/.uv_cache`。
+2. 修改 `~/.bashrc`，加入：
+   - `PATH` 补充
+   - `cd` 自动激活 `.venv` 的函数别名
+   - `go` 快捷命令（进入项目并激活环境）
+   - `save` 快捷命令（当前写入的是 `bash /root/data/lehome-challenge/git.sh`）
+3. 激活 `.venv` 后触发 `python -c "import isaacsim"`，用于 EULA 授权。
+4. 获取 `isaacsim` 安装路径并创建软链接：
+   `third_party/IsaacLab/_isaac_sim -> <isaacsim包路径>`。
 
-We provide several training examples; the models and training framework are from LeRobot.
+适用场景：完成 shell 使用体验优化和 IsaacSim 路径联通。
 
-#### Quick Start
+## 5) `just save <版本号>`
 
-Train using one of the pre-configured training files:
+执行脚本：`start/step_git.sh <版本号>`
 
-```bash
-lerobot-train --config_path=configs/train_<policy>.yaml
-```
+会做的事情：
 
-**Available config files:**
-- `configs/train_act.yaml` - ACT 
-- `configs/train_dp.yaml` - DP
-- `configs/train_smolvla.yaml` - SmolVLA 
+1. 校验版本号参数，生成 Tag（如 `v10`）。
+2. 进入 `/root/data/lehome-challenge` 并尝试激活 `.venv`。
+3. 检查 Git 身份，缺失时自动设置为脚本内默认值。
+4. 若检测到 `origin` 指向官方仓库，会自动改为个人仓库地址并添加 `upstream`。
+5. 执行 `git add .`、`git commit`（无变更则跳过）。
+6. 重建同名 Tag 并推送当前分支和 Tag。
 
-**Key configuration options:**
-- **Dataset path**: Update `dataset.root` to point to your dataset
-- **Input/Output features**: Specify which observations and actions to use
-- **Training parameters**: Adjust `batch_size`, `steps`, `save_freq`, etc.
-- **Output directory**: Modify `output_dir` to save models elsewhere
+适用场景：你希望一条命令完成提交+打版本标签+推送。
 
-> 📖 **For detailed training instructions, feature selection guide, and configuration options, see our [Training Guide](docs/training.md).**
-
-### 4. Eval
-
-Evaluate your trained policy on the challenge garments. The framework supports LeRobot policies and custom implementations.
-
-**Examples:**
+## 常见执行顺序
 
 ```bash
-# Evaluate using LeRobot policy 
-# Note: --policy_path and --dataset_root are required parameters for LeRobot policies, ready to run once the dataset and model checkpoints are prepared.
-python -m scripts.eval \
-    --policy_type lerobot \
-    --policy_path outputs/train/act_top_long/checkpoints/last/pretrained_model \
-    --garment_type "top_long" \
-    --dataset_root Datasets/example/top_long_merged \
-    --num_episodes 2 \
-    --enable_cameras \
-    --device cpu    
-
-# Evaluate custom policy
-# Note: Participants can define their own model loading logic within the policy class. Provides flexibility for participants to implement specialized loading and inference logic.
-python -m scripts.eval \
-    --policy_type custom \
-    --garment_type "top_long" \
-    --num_episodes 5 \
-    --enable_cameras \
-    --device cpu
+just vpn      # 可选：先准备代理
+just s1       # 基础安装
+just s2       # 按官方步骤补全
+just s3       # 环境授权与软链接
+just save 1   # 备份当前状态到 v1
 ```
 
-#### Common Options
+## 补充：`just setup`
 
-| Parameter | Description | Default | Required For |
-|-----------|-------------|---------|--------------|
-| `--policy_type` | Policy type: `lerobot`, `custom` | `lerobot` | All |
-| `--policy_path` | Path to model checkpoint | - | All (passed as `model_path` for custom) |
-| `--dataset_root` | Dataset path (for metadata) | - | **LeRobot only** |
-| `--garment_type` | Type of garments: `top_long`, `top_short`, `pant_long`, `pant_short`, `custom` | `top_long` | All |
-| `--num_episodes` | Episodes per garment | `5` | All |
-| `--max_steps` | Max steps per episode | `600` | All |
-| `--save_video` | Save evaluation videos | | All |
-| `--video_dir` | Directory to save evaluation videos | `outputs/eval_videos` | `--save_video` |
-| `--enable_cameras` | Enable camera rendering | | All |
-| `--device` | Device for inference: only `cpu` |'cpu'| All |
-| `--headless` | Used for evaluation without GUI | disabled | All |
+虽然不在上面 5 条里，但 `just setup` 也很常用。它会按顺序执行：
 
-**Parameter Descriptions:**
-
-* **Required for LeRobot Policy**: `--policy_path` (model path) and `--dataset_root` (dataset path, used for loading metadata).
-* **Custom Policy**: `--policy_path` is passed to the policy constructor as `model_path`. Participants can define their own model loading logic (refer to `scripts/eval_policy/example_participant_policy.py`).
-
-
-#### Garment Test Configuration
-Evaluation is performed on the `Release` set of garments. Under the directory `Assets/objects/Challenge_Garment/Release`, each garment category folder contains a corresponding text file listing the garment names (e.g., `Top_Long/Top_Long.txt`).
-
-*   **Evaluate a Category**: Set `--garment_type` to `top_long`, `top_short`, `pant_long`, or `pant_short` to evaluate all garments within that category.
-*   **Evaluate Specific Garments**: Edit `Assets/objects/Challenge_Garment/Release/Release_test_list.txt` to include only the garments you want to test, then run with `--garment_type custom`.
-
-> 📖 **For detailed policy evaluation guide**, see [eval_guide](docs/policy_eval.md).
-
-
-## 📮 Submission
-
-Once you are satisfied with your model's performance, follow these steps to submit your results to the competition leaderboard:
-
->Submission instructions will be available on the [competition website](https://lehome-challenge.com/).
-
-## 🧩 Acknowledgments
-
-This project stands on the shoulders of giants. We utilize and build upon the following excellent open-source projects:
-
-- **[Isaac Sim](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/index.html)** - For photorealistic physics simulation
-- **[Isaac Lab](https://isaac-sim.github.io/IsaacLab/main/index.html)** - For modular robot learning environments
-- **[LeRobot](https://github.com/huggingface/lerobot)** - For state-of-the-art Imitation Learning algorithms
-- **[Marble](https://marble.worldlabs.ai/)** - For diverse simulation scene generation
+```bash
+just s1
+just s2
+just s3
+```
