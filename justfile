@@ -28,6 +28,14 @@ s3:
 save version:
     bash start/step_git.sh {{version}}
 
+# 训练模型 (示例: just train act)
+train *args:
+    bash run_train.sh {{args}}
+
+# 评估模型 (示例: just eval act outputs/train/act/checkpoints/last/pretrained_model top_long 5 Datasets/example/top_long_merged)
+eval *args:
+    bash run_eval.sh {{args}}
+
 # 一键全自动配置 (按顺序跑完 1, 2, 3)
 setup:
     just s1

@@ -1,6 +1,6 @@
 # LeHome Challenge `just` 命令说明
 
-本文档说明 `justfile` 里的 5 条核心命令，以及它们实际会执行的脚本行为。
+本文档说明 `justfile` 里的核心命令，以及它们实际会执行的脚本行为。
 
 ## 先决条件
 
@@ -17,6 +17,8 @@
 | `just s2` | `bash start/step2.sh` | 按官方步骤补全安装与数据下载 |
 | `just s3` | `bash start/step3.sh` | Shell 快捷命令、IsaacSim 授权、IsaacLab 路径软链接 |
 | `just save <版本号>` | `bash start/step_git.sh <版本号>` | 自动提交并打 Tag 推送到 GitHub |
+| `just train [model]` | `bash run_train.sh [model]` | 启动训练并记录日志 |
+| `just eval [model] [policy_path] [garment] [episodes] [dataset_root]` | `bash run_eval.sh ...` | 启动评估并记录日志 |
 
 ## 1) `just vpn`
 
@@ -82,7 +84,7 @@
    - `PATH` 补充
    - `cd` 自动激活 `.venv` 的函数别名
    - `go` 快捷命令（进入项目并激活环境）
-   - `save` 快捷命令（当前写入的是 `bash /root/data/lehome-challenge/git.sh`）
+   - `save` 快捷命令（当前写入的是 `bash /root/data/lehome-challenge/start/step_git.sh`）
 3. 激活 `.venv` 后触发 `python -c "import isaacsim"`，用于 EULA 授权。
 4. 获取 `isaacsim` 安装路径并创建软链接：
    `third_party/IsaacLab/_isaac_sim -> <isaacsim包路径>`。
@@ -103,6 +105,56 @@
 6. 重建同名 Tag 并推送当前分支和 Tag。
 
 适用场景：你希望一条命令完成提交+打版本标签+推送。
+
+## 6) `just train [model]`
+
+执行脚本：`run_train.sh`
+
+参数说明：
+
+- `model`（可选，默认 `act`）：支持 `act` / `dp` / `smolvla`（`diffusion` 会自动映射到 `dp`）
+
+会做的事情：
+
+1. 自动定位到脚本所在项目目录，不依赖固定的 `$HOME/data` 路径。
+2. 激活 `.venv`（若不存在会报错退出）。
+3. 根据 `model` 选择配置文件：`configs/train_<model>.yaml`。
+4. 执行 `lerobot-train`，日志写入 `logs/` 目录。
+
+示例：
+
+```bash
+just train
+just train dp
+just train smolvla
+```
+
+## 7) `just eval [model] [policy_path] [garment] [episodes] [dataset_root]`
+
+执行脚本：`run_eval.sh`
+
+参数说明（按顺序）：
+
+1. `model`：默认 `act`
+2. `policy_path`：默认 `outputs/train/<model>/checkpoints/last/pretrained_model`
+3. `garment`：默认 `top_long`
+4. `episodes`：默认 `10`
+5. `dataset_root`：默认 `Datasets/example/<garment>_merged`
+
+会做的事情：
+
+1. 自动定位项目目录并激活 `.venv`。
+2. 以 `lerobot` policy 方式调用 `python -m scripts.eval`。
+3. 自动携带 `--dataset_root`（LeRobot 评估必需）。
+4. 评估日志写入 `logs/` 目录。
+
+示例：
+
+```bash
+just eval
+just eval act outputs/train/act/checkpoints/last/pretrained_model top_long 5 Datasets/example/top_long_merged
+just eval smolvla outputs/train/smolvla/checkpoints/last/pretrained_model top_short 3 Datasets/example/top_short_merged
+```
 
 ## 常见执行顺序
 

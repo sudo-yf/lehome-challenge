@@ -43,7 +43,7 @@ alias cd='cd_activate_venv'
 
 # 快捷命令
 alias go='cd /root/data/lehome-challenge && source .venv/bin/activate'
-alias save='bash /root/data/lehome-challenge/git.sh'
+alias save='bash /root/data/lehome-challenge/start/step_git.sh'
 
 # 登录时如果在项目内，自动激活
 if [ -f ".venv/bin/activate" ]; then source .venv/bin/activate; fi
