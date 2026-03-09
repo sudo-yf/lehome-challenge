@@ -135,15 +135,20 @@ TIMESTAMP="$(date +'%m-%d-%H:%M')"
 
 RUN_CONFIG="$CONFIG"
 TMP_CONFIG=""
+ensure_tmp_config() {
+    if [[ -z "$TMP_CONFIG" ]]; then
+        TMP_CONFIG="$(mktemp /tmp/train_${MODEL}_config_XXXX.yaml)"
+        cp "$CONFIG" "$TMP_CONFIG"
+        RUN_CONFIG="$TMP_CONFIG"
+    fi
+}
 if [[ -n "$STEPS_OVERRIDE" ]]; then
-    TMP_CONFIG="$(mktemp /tmp/train_${MODEL}_steps_${STEPS_OVERRIDE}_XXXX.yaml)"
-    cp "$CONFIG" "$TMP_CONFIG"
+    ensure_tmp_config
     if grep -q '^steps:' "$TMP_CONFIG"; then
         sed -i "s/^steps:.*/steps: ${STEPS_OVERRIDE}/" "$TMP_CONFIG"
     else
         printf '\nsteps: %s\n' "$STEPS_OVERRIDE" >> "$TMP_CONFIG"
     fi
-    RUN_CONFIG="$TMP_CONFIG"
     STEPS="$STEPS_OVERRIDE"
 fi
 cleanup() {
@@ -155,7 +160,6 @@ trap cleanup EXIT
 
 LOG_NAME="${TIMESTAMP}_${MODEL}_train_bs${BS}_s${STEPS}.log"
 
-# lerobot 默认不覆盖已有输出目录（resume=false），提前给出明确提示。
 HAS_OUTPUT_OVERRIDE=0
 HAS_RESUME=0
 for arg in "${REMAIN_ARGS[@]}"; do
@@ -168,17 +172,30 @@ for arg in "${REMAIN_ARGS[@]}"; do
             ;;
     esac
 done
+
+AUTO_OUTPUT_DIR=""
 if [[ -d "$CFG_OUTPUT_DIR" && $HAS_OUTPUT_OVERRIDE -eq 0 && $HAS_RESUME -eq 0 ]]; then
-    echo "❌ 输出目录已存在: $CFG_OUTPUT_DIR"
-    echo "可选处理："
-    echo "1) 改新目录再跑: just train $MODEL --output_dir outputs/train/${MODEL}_$(date +%m%d_%H%M%S)"
-    echo "2) 继续训练: just train $MODEL --resume=true --config_path ${CFG_OUTPUT_DIR}/train_config.json"
-    exit 2
+    base_output_dir="$CFG_OUTPUT_DIR"
+    suffix=2
+    while [[ -d "${base_output_dir}_${suffix}" ]]; do
+        ((suffix++))
+    done
+    AUTO_OUTPUT_DIR="${base_output_dir}_${suffix}"
+    ensure_tmp_config
+    if grep -q '^output_dir:' "$TMP_CONFIG"; then
+        sed -i "s#^output_dir:.*#output_dir: ${AUTO_OUTPUT_DIR}#" "$TMP_CONFIG"
+    else
+        printf '\noutput_dir: %s\n' "$AUTO_OUTPUT_DIR" >> "$TMP_CONFIG"
+    fi
+    CFG_OUTPUT_DIR="$AUTO_OUTPUT_DIR"
 fi
 
 echo "🚀 开始训练: $MODEL"
 echo "⚙️ 配置文件: $RUN_CONFIG"
-echo "📦 输出目录(来自配置): $CFG_OUTPUT_DIR"
+echo "📦 输出目录: $CFG_OUTPUT_DIR"
+if [[ -n "$AUTO_OUTPUT_DIR" ]]; then
+    echo "♻️ 原目录已存在，自动顺延到: $AUTO_OUTPUT_DIR"
+fi
 echo "📝 日志文件: logs/$LOG_NAME"
 if [[ -n "$STEPS_OVERRIDE" ]]; then
     echo "⏱️ steps 覆盖: $STEPS_OVERRIDE"

@@ -130,8 +130,8 @@
 
 注意：
 
-- 若配置中的 `output_dir` 已存在，脚本会直接报错退出（避免覆盖）。
-- 这时请改新目录（`--output_dir`）或使用 `--resume=true --config_path <旧目录>/train_config.json` 续训。
+- 若配置中的 `output_dir` 已存在且未显式传入 `--output_dir` 或 `--resume`，脚本会自动改为 `*_2`、`*_3` 这样的新目录继续训练。
+- 若你想手动指定目录，仍可传 `--output_dir`；若想续训旧目录，使用 `--resume=true --config_path <旧目录>/train_config.json`。
 
 示例：
 

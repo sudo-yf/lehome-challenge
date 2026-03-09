@@ -1,0 +1,28 @@
+set shell := ["bash", "-uc"]
+
+default:
+    @just --list
+
+vpn *args:
+    bash vpn.sh {{args}}
+
+step1 *args:
+    bash step1.sh {{args}}
+
+step2:
+    bash step2.sh
+
+step3 *args:
+    bash step3.sh {{args}}
+
+setup *args:
+    bash setup.sh {{args}}
+
+train *args:
+    bash train.sh {{args}}
+
+eval *args:
+    bash eval.sh {{args}}
+
+save version:
+    bash save.sh {{version}}

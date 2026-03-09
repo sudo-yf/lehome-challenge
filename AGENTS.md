@@ -71,7 +71,7 @@
 
 输出目录防覆盖策略：
 
-- 若配置中的 `output_dir` 已存在且未显式指定 `--output_dir` 或 `--resume`，应报错退出。
+- 若配置中的 `output_dir` 已存在且未显式指定 `--output_dir` 或 `--resume`，应自动改为同名递增目录（如 `_2`、`_3`）后再训练。
 - 续训示例：`just train act --resume=true --config_path outputs/train/act_top_long/train_config.json`
 
 ### 5.2 评估（run_eval.sh / just eval）
