@@ -11,9 +11,9 @@ Evaluate trained LeRobot models (ACT, Diffusion Policy, SmolVLA):
 ```bash
 python -m scripts.eval \
     --policy_type lerobot \
-    --policy_path outputs/train/act \
+    --policy_path outputs/train/act_top_long/checkpoints/last/pretrained_model \
     --garment_type "top_long" \
-    --dataset_root Datasets/example/top_long \
+    --dataset_root Datasets/example/top_long_merged \
     --num_episodes 5 \
     --enable_cameras \
     --device cpu
@@ -22,7 +22,7 @@ python -m scripts.eval \
 > 💡 **Tip:** Using `--device cpu` ensures the simulator runs on CPU to avoid GUI conflicts in some environments, while the actual policy (LeRobot or Custom) will still be loaded to CUDA for fast inference. `--enable_cameras` is required to see camera views in the GUI or record videos.
 
 **Requirements:**
-- `pretrained_model` directory with config files
+- `pretrained_model` directory with config files (e.g. `.../checkpoints/last/pretrained_model`)
 - Training dataset metadata (for `--dataset_root`)
 - For VLA models: add `--task_description "fold the garment on the table"`
 

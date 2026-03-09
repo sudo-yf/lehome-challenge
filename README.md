@@ -112,20 +112,33 @@
 
 参数说明：
 
-- `model`（可选，默认 `act`）：支持 `act` / `dp` / `smolvla`（`diffusion` 会自动映射到 `dp`）
+- `model`（可选，默认 `act`）：支持 `act` / `diffusion` / `smolvla`（兼容别名 `dp`）
+- `steps`（可选）：支持多种写法  
+  - `just train act 1000`  
+  - `just train act step1000`  
+  - `just train act step 1000`  
+  - `just train act steps=1000`  
+  - `just train act --steps 1000`
+- 其余参数会原样透传给 `lerobot-train`
 
 会做的事情：
 
 1. 自动定位到脚本所在项目目录，不依赖固定的 `$HOME/data` 路径。
 2. 激活 `.venv`（若不存在会报错退出）。
-3. 根据 `model` 选择配置文件：`configs/train_<model>.yaml`。
-4. 执行 `lerobot-train`，日志写入 `logs/` 目录。
+3. 根据 `model` 选择配置文件：`act -> train_act.yaml`，`diffusion -> train_dp.yaml`，`smolvla -> train_smolvla.yaml`。
+4. 直接按配置文件执行 `lerobot-train`（不强制覆盖 `output_dir` / `wandb` / `device`），日志写入 `logs/` 目录。
+
+注意：
+
+- 若配置中的 `output_dir` 已存在，脚本会直接报错退出（避免覆盖）。
+- 这时请改新目录（`--output_dir`）或使用 `--resume=true --config_path <旧目录>/train_config.json` 续训。
 
 示例：
 
 ```bash
 just train
-just train dp
+just train act 1000
+just train diffusion
 just train smolvla
 ```
 
@@ -136,10 +149,14 @@ just train smolvla
 参数说明（按顺序）：
 
 1. `model`：默认 `act`
-2. `policy_path`：默认 `outputs/train/<model>/checkpoints/last/pretrained_model`
+2. `policy_path`：默认值按模型映射  
+   - `act` -> `outputs/train/act_top_long/checkpoints/last/pretrained_model`  
+   - `diffusion` -> `outputs/train/dp_top_long/checkpoints/last/pretrained_model`  
+   - `smolvla` -> `outputs/train/smolvla_top_long/checkpoints/last/pretrained_model`
 3. `garment`：默认 `top_long`
-4. `episodes`：默认 `10`
+4. `episodes`：默认 `5`
 5. `dataset_root`：默认 `Datasets/example/<garment>_merged`
+6. 其余参数会原样透传给 `python -m scripts.eval`
 
 会做的事情：
 
@@ -152,8 +169,9 @@ just train smolvla
 
 ```bash
 just eval
-just eval act outputs/train/act/checkpoints/last/pretrained_model top_long 5 Datasets/example/top_long_merged
-just eval smolvla outputs/train/smolvla/checkpoints/last/pretrained_model top_short 3 Datasets/example/top_short_merged
+just eval act outputs/train/act_top_long/checkpoints/last/pretrained_model top_long 5 Datasets/example/top_long_merged
+just eval diffusion outputs/train/dp_top_long/checkpoints/last/pretrained_model top_short 3 Datasets/example/top_short_merged
+just eval smolvla outputs/train/smolvla_top_long/checkpoints/last/pretrained_model top_long 5 Datasets/example/top_long_merged --task_description "fold the garment on the table"
 ```
 
 ## 常见执行顺序

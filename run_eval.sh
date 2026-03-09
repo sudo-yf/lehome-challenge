@@ -15,15 +15,47 @@ fi
 source .venv/bin/activate
 
 MODEL="${1:-act}"
-if [[ "$MODEL" == "diffusion" ]]; then
-    MODEL="dp"
+if [[ $# -gt 0 ]]; then
+    shift
 fi
-DEFAULT_POLICY_PATH="outputs/train/${MODEL}/checkpoints/last/pretrained_model"
-POLICY_PATH="${2:-$DEFAULT_POLICY_PATH}"
-GARMENT="${3:-top_long}"
-EPISODES="${4:-10}"
+
+case "$MODEL" in
+    act)
+        DEFAULT_RUN_DIR="outputs/train/act_top_long"
+        ;;
+    diffusion|dp)
+        MODEL="diffusion"
+        DEFAULT_RUN_DIR="outputs/train/dp_top_long"
+        ;;
+    smolvla)
+        DEFAULT_RUN_DIR="outputs/train/smolvla_top_long"
+        ;;
+    *)
+        echo "❌ 不支持的模型: $MODEL"
+        echo "可选: act / diffusion / smolvla（兼容别名: dp）"
+        exit 1
+        ;;
+esac
+
+DEFAULT_POLICY_PATH="${DEFAULT_RUN_DIR}/checkpoints/last/pretrained_model"
+POLICY_PATH="${1:-$DEFAULT_POLICY_PATH}"
+if [[ $# -gt 0 ]]; then
+    shift
+fi
+GARMENT="${1:-top_long}"
+if [[ $# -gt 0 ]]; then
+    shift
+fi
+EPISODES="${1:-5}"
+if [[ $# -gt 0 ]]; then
+    shift
+fi
 DEFAULT_DATASET_ROOT="Datasets/example/${GARMENT}_merged"
-DATASET_ROOT="${5:-$DEFAULT_DATASET_ROOT}"
+DATASET_ROOT="${1:-$DEFAULT_DATASET_ROOT}"
+if [[ $# -gt 0 ]]; then
+    shift
+fi
+EXTRA_ARGS=("$@")
 
 TIMESTAMP="$(date +'%m-%d-%H:%M')"
 LOG_NAME="${TIMESTAMP}_${MODEL}_eval_${GARMENT}_ep${EPISODES}.log"
@@ -38,8 +70,18 @@ if [[ ! -d "$DATASET_ROOT" ]]; then
     echo "   若是自定义路径，请在第 5 个参数传入正确值。"
 fi
 
-EXTRA_ARGS=()
-if [[ "$MODEL" == "smolvla" ]]; then
+if [[ ! -d "$POLICY_PATH" ]]; then
+    echo "⚠️ policy_path 目录不存在: $POLICY_PATH"
+fi
+
+HAS_TASK_DESCRIPTION=0
+for arg in "${EXTRA_ARGS[@]}"; do
+    if [[ "$arg" == "--task_description" || "$arg" == --task_description=* ]]; then
+        HAS_TASK_DESCRIPTION=1
+        break
+    fi
+done
+if [[ "$MODEL" == "smolvla" && $HAS_TASK_DESCRIPTION -eq 0 ]]; then
     EXTRA_ARGS+=(--task_description "fold the garment on the table")
 fi
 
