@@ -1,43 +1,34 @@
-# 强制使用 bash 并开启严格模式
 set shell := ["bash", "-uc"]
 
-# 默认列出所有可用命令
 default:
     @just --list
 
-# --- 核心流程 (全部指向 start 文件夹) ---
+vpn *args:
+    bash lehome/allinone.sh vpn {{args}}
 
-# 开启 VPN 代理
-vpn:
-    bash start/step_vpn.sh
+prepare *args:
+    bash lehome/allinone.sh prepare {{args}}
 
-# 执行 Step 1: 基础安装
-s1:
-    bash start/step1.sh
+data *args:
+    bash lehome/allinone.sh data {{args}}
 
-# 执行 Step 2: 授权与软链接
-s2:
-    bash start/step2.sh
+setup *args:
+    bash lehome/allinone.sh setup {{args}}
 
-# 执行 Step 3: 运行仿真验证
-s3:
-    bash start/step3.sh
-
-# 备份代码到 GitHub (用法: just save 10)
-# 对应原本的 step_git.sh，支持传入版本号参数
-save version:
-    bash start/step_git.sh {{version}}
-
-# 训练模型 (示例: just train act / just train diffusion / just train smolvla)
 train *args:
-    bash run_train.sh {{args}}
+    bash lehome/train.sh {{args}}
 
-# 评估模型（默认启用 xvfb-run -a + --headless；示例: just eval act outputs/train/act_top_long/checkpoints/last/pretrained_model top_long 5 Datasets/example/top_long_merged)
 eval *args:
-    bash run_eval.sh {{args}}
+    bash lehome/eval.sh {{args}}
 
-# 一键全自动配置 (按顺序跑完 1, 2, 3)
-setup:
-    just s1
-    just s2
-    just s3
+xvla *args:
+    bash lehome/xvla.sh {{args}}
+
+wandb *args:
+    bash lehome/wandb.sh {{args}}
+
+sweep *args:
+    bash lehome/sweep.sh {{args}}
+
+save version:
+    bash lehome/allinone.sh save {{version}}

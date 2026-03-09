@@ -24,7 +24,40 @@ normalize_bool() {
     esac
 }
 
+wandb_load_env_file() {
+    local env_file="${WANDB_ENV_FILE:-/root/data/wandb.env}"
+    [[ -f "$env_file" ]] || return 0
+
+    while IFS= read -r raw_line || [[ -n "$raw_line" ]]; do
+        local line="${raw_line#export }"
+        line="${line#export\t}"
+        line="${line#${line%%[![:space:]]*}}"
+        line="${line%${line##*[![:space:]]}}"
+
+        [[ -n "$line" ]] || continue
+        [[ "$line" == \#* ]] && continue
+
+        if [[ "$line" == wandb_* ]]; then
+            export WANDB_API_KEY="$line"
+            continue
+        fi
+
+        if [[ "$line" == *=* ]]; then
+            local key="${line%%=*}"
+            local value="${line#*=}"
+            key="${key%${key##*[![:space:]]}}"
+            value="${value#${value%%[![:space:]]*}}"
+            value="${value%${value##*[![:space:]]}}"
+            if [[ ( "$value" == "'*'" ) || ( "$value" == '"*"' ) ]]; then
+                value="${value:1:${#value}-2}"
+            fi
+            export "$key=$value"
+        fi
+    done < "$env_file"
+}
+
 wandb_load_env() {
+    wandb_load_env_file
     WANDB_ENABLE="$(normalize_bool "${WANDB_ENABLE:-false}" "WANDB_ENABLE")"
     WANDB_DISABLE_ARTIFACT="$(normalize_bool "${WANDB_DISABLE_ARTIFACT:-false}" "WANDB_DISABLE_ARTIFACT")"
     WANDB_MODE="${WANDB_MODE:-disabled}"
@@ -47,9 +80,24 @@ wandb_load_env() {
     export WANDB_DISABLE_ARTIFACT
     export WANDB_MODE
     export WANDB_PROJECT
-    export WANDB_ENTITY
-    export WANDB_NOTES
-    export WANDB_RUN_ID
+
+    if [[ -n "$WANDB_ENTITY" ]]; then
+        export WANDB_ENTITY
+    else
+        unset WANDB_ENTITY
+    fi
+
+    if [[ -n "$WANDB_NOTES" ]]; then
+        export WANDB_NOTES
+    else
+        unset WANDB_NOTES
+    fi
+
+    if [[ -n "$WANDB_RUN_ID" ]]; then
+        export WANDB_RUN_ID
+    else
+        unset WANDB_RUN_ID
+    fi
 }
 
 wandb_effective_enable() {

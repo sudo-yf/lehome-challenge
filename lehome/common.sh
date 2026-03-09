@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-V2_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd -- "$V2_DIR/../.." && pwd)"
+LEHOME_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd -- "$LEHOME_DIR/.." && pwd)"
 
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'
@@ -27,12 +27,33 @@ die() {
     exit 1
 }
 
+rule() {
+    printf '%b%s%b\n' "$BLUE" "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "$NC"
+}
+
+section() {
+    echo
+    rule
+    log "▶ $*"
+    rule
+}
+
+kv() {
+    local key="$1"
+    shift
+    printf '%b%-18s%b %s\n' "$BLUE" "${key}:" "$NC" "$*"
+}
+
+cmd_preview() {
+    log "💻 $*"
+}
+
 project_root() {
     echo "$PROJECT_ROOT"
 }
 
-v2_root() {
-    echo "$V2_DIR"
+lehome_root() {
+    echo "$LEHOME_DIR"
 }
 
 ensure_repo_root() {
@@ -47,7 +68,8 @@ ensure_path() {
 ensure_uv() {
     ensure_path
     if ! command -v uv >/dev/null 2>&1; then
-        log "🔧 未检测到 uv，开始安装..."
+        section "安装 uv"
+        cmd_preview 'curl -LsSf https://astral.sh/uv/install.sh | sh'
         curl -LsSf https://astral.sh/uv/install.sh | sh
         ensure_path
     fi
@@ -80,7 +102,8 @@ install_system_libs() {
     local priv_cmd=()
     [[ "$(id -u)" -eq 0 ]] || priv_cmd=(sudo)
 
-    log "🧱 安装 IsaacSim 所需系统库..."
+    section "安装系统图形库"
+    cmd_preview "${priv_cmd[*]:-}(root) apt update && apt install -y ..."
     "${priv_cmd[@]}" apt update
     "${priv_cmd[@]}" apt install -y \
         libglu1-mesa \
@@ -107,7 +130,8 @@ activate_venv() {
 clone_isaaclab_if_missing() {
     mkdir -p "$PROJECT_ROOT/third_party"
     if [[ ! -d "$PROJECT_ROOT/third_party/IsaacLab" ]]; then
-        log "📥 克隆 IsaacLab..."
+        section "克隆 IsaacLab"
+        cmd_preview 'git clone https://github.com/lehome-official/IsaacLab.git third_party/IsaacLab'
         git clone https://github.com/lehome-official/IsaacLab.git "$PROJECT_ROOT/third_party/IsaacLab"
     fi
     ok "✅ IsaacLab 目录已就绪"
@@ -162,9 +186,9 @@ safe_symlink() {
     ok "✅ 已建立软链接: $link_path -> $target"
 }
 
-v2_script_path() {
+local_script_path() {
     local script="$1"
-    printf '%s/%s\n' "$V2_DIR" "$script"
+    printf '%s/%s\n' "$LEHOME_DIR" "$script"
 }
 
 repo_script_path() {
@@ -172,16 +196,16 @@ repo_script_path() {
     printf '%s/%s\n' "$PROJECT_ROOT" "$script"
 }
 
-invoke_v2_script() {
+invoke_local_script() {
     local script="$1"
     shift
-    bash "$(v2_script_path "$script")" "$@"
+    bash "$(local_script_path "$script")" "$@"
 }
 
-exec_v2_script() {
+exec_local_script() {
     local script="$1"
     shift
-    exec bash "$(v2_script_path "$script")" "$@"
+    exec bash "$(local_script_path "$script")" "$@"
 }
 
 invoke_repo_script() {

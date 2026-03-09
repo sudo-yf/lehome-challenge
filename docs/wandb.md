@@ -128,3 +128,70 @@ The W&B SDK provides a comprehensive experiment tracking solution for machine le
 Source: https://context7.com/wandb/wandb/llms.txt
 
 The `wandb.config` object stores and tracks hyperparameters and settings for your experiment. You can set configuration values at initialization or update them later using the `update()` method. Config values can be accessed directly as attributes of the `run.config` object or through the global `wandb.config`.
+
+
+## LeHome Repo Sweep Workflow
+
+`docs/wandb.md` 上面的内容是 W&B 官方式通用示例；在本仓库里，自动调参与预检的正式入口是：
+- `lehome/wandb.sh`：只做 WandB 预检，并会优先读取 `WANDB_ENV_FILE`（默认 `/root/data/wandb.env`）
+- `lehome/sweep.sh`：创建 / 启动 sweep，也支持新的 `--preflight` 预检模式
+- `scripts/wandb_sweep.py`：生成 sweep config，并调用 `wandb.sweep(...)` 与 `wandb.agent(...)`
+- `scripts/wandb_preflight.py`：使用新的 `wandb.init()` API 做轻量在线预检
+
+### Repository-specific differences you need to know
+
+- `scripts/wandb_sweep.py` 不再只传 `--wandb.enable=true`，还会显式传 `--wandb.mode=online`。这是因为 `configs/train_xvla.yaml` 默认写了 `wandb.mode: disabled`；如果不覆盖，sweep 虽然能创建，但训练侧不会真正把指标上报到 W&B。
+- `lehome/sweep.sh --preflight` / `PRECHECK=true` 会先跑一个轻量 online run，验证 key、project、entity 与同步链路，再退出；它不会创建 sweep。
+- sweep 的目标指标默认使用 LeRobot 训练里实际会上报的 `train/loss`。
+- 需要给训练额外透传参数时，不直接改 `command`，而是通过 `lehome/sweep.sh ... -- <train-args>` 或 `scripts/wandb_sweep.py --train-arg ...` 追加到 `run_train.sh`。
+
+### Recommended repo workflow
+
+默认凭据来源建议使用 `WANDB_ENV_FILE`：
+- 单行原始 token 文件，例如当前的 `/root/data/wandb.md`
+- 或标准 env 文件，例如 `WANDB_API_KEY=wandb_v1_...`
+
+1. 先做基础预检：
+
+```bash
+WANDB_ENABLE=true WANDB_MODE=online WANDB_ENV_FILE=/root/data/wandb.md bash lehome/wandb.sh
+```
+
+2. 再做一次新的 API 在线预检：
+
+```bash
+PRECHECK=true WANDB_ENV_FILE=/root/data/wandb.md bash lehome/sweep.sh --model xvla
+```
+
+3. 先做一次 dry-run，确认 sweep 配置：
+
+```bash
+DRY_RUN=true SWEEP_CONFIG_PATH=configs/sweeps/xvla_wandb.yaml bash lehome/sweep.sh --model xvla --steps 1000
+```
+
+4. 真正创建并启动 sweep：
+
+```bash
+WANDB_ENV_FILE=/root/data/wandb.md bash lehome/sweep.sh --model xvla --count 8 --steps 3000
+```
+
+5. 如果只想先创建 sweep，再手动起 agent：
+
+```bash
+WANDB_ENV_FILE=/root/data/wandb.md CREATE_ONLY=true bash lehome/sweep.sh --model xvla --steps 3000
+```
+
+### Common repo examples
+
+可选地，也可以把 sweep 搜索空间写进 `configs/sweeps/xvla_wandb.yaml`，再通过 `SWEEP_CONFIG_PATH=...` 载入。
+
+```bash
+PRECHECK=true WANDB_ENV_FILE=/root/data/wandb.md bash lehome/sweep.sh --model xvla
+WANDB_ENV_FILE=/root/data/wandb.md bash lehome/sweep.sh --model xvla --count 12 --steps 3000
+WANDB_ENV_FILE=/root/data/wandb.md WANDB_PROJECT=lehome_xvla_sweep_top_long bash lehome/sweep.sh --model xvla --count 8 --steps 5000
+DRY_RUN=true SWEEP_CONFIG_PATH=configs/sweeps/xvla_wandb.yaml bash lehome/sweep.sh --model xvla --steps 1000 -- --job_name=xvla_sweep_top_long
+```
+
+### No LeRobot patching
+
+This repository automation does **not** modify any `lerobot` Python source files under `.venv/.../site-packages/lerobot/`. The sweep integration is implemented only in repository scripts and docs.

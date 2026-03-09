@@ -29,7 +29,7 @@ CONFIG_TEMPLATE="${CONFIG_TEMPLATE:-}"
 
 usage() {
     cat <<'USAGE'
-Usage: bash start/v2.0/xvla.sh
+Usage: bash lehome/xvla.sh
 
 Edit the config block at the top of the script, then set:
 - WORK_MODE=install  -> bootstrap LeHome env and verify X-VLA imports
@@ -115,7 +115,7 @@ ensure_lehome_env() {
     ensure_repo_root
     ensure_path
     load_defaults_from_config
-    [[ -f "$PROJECT_ROOT/.venv/bin/activate" ]] || die "❌ 未找到 $PROJECT_ROOT/.venv，请先执行 install 模式或 start/v2.0/setup.sh"
+    [[ -f "$PROJECT_ROOT/.venv/bin/activate" ]] || die "❌ 未找到 $PROJECT_ROOT/.venv，请先执行 lehome/prepare.sh 或 lehome/allinone.sh setup"
     activate_venv
 }
 
@@ -133,7 +133,7 @@ run_install() {
     fi
 
     log "🚀 开始按 LeHome v2 流程准备环境..."
-    bash "$SCRIPT_DIR/setup.sh" "${setup_args[@]}"
+    bash "/allinone.sh" setup "${setup_args[@]}"
 
     activate_venv
     python -c "import lerobot.policies.xvla; print('X-VLA import ok')"

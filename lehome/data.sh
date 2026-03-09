@@ -6,7 +6,7 @@ source "$SCRIPT_DIR/common.sh"
 
 usage() {
     cat <<'USAGE'
-Usage: bash start/v2.0/data.sh [--with-full-dataset]
+Usage: bash lehome/data.sh [--with-full-dataset]
 
 - --with-full-dataset  额外下载完整 dataset_challenge（含 depth 信息）
 USAGE
@@ -29,18 +29,22 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+section "下载数据资源"
+kv "Project root" "$PROJECT_ROOT"
+kv "Full dataset" "$WITH_FULL_DATASET"
+
 ensure_repo_root
 activate_venv
-command -v hf >/dev/null 2>&1 || die "❌ 未找到 hf 命令，请先执行 start/v2.0/install.sh"
+command -v hf >/dev/null 2>&1 || die "❌ 未找到 hf 命令，请先执行 lehome/prepare.sh"
 
-log "📥 下载 Assets..."
+cmd_preview 'hf download lehome/asset_challenge --repo-type dataset --local-dir Assets'
 hf download lehome/asset_challenge --repo-type dataset --local-dir Assets
 
-log "📥 下载合并版示例数据集..."
+cmd_preview 'hf download lehome/dataset_challenge_merged --repo-type dataset --local-dir Datasets/example'
 hf download lehome/dataset_challenge_merged --repo-type dataset --local-dir Datasets/example
 
 if [[ $WITH_FULL_DATASET -eq 1 ]]; then
-    log "📥 下载完整 dataset_challenge..."
+    cmd_preview 'hf download lehome/dataset_challenge --repo-type dataset --local-dir Datasets/example'
     hf download lehome/dataset_challenge --repo-type dataset --local-dir Datasets/example
 else
     warn "⚠️ 未下载完整 dataset_challenge；如需 depth 信息，请附加 --with-full-dataset"

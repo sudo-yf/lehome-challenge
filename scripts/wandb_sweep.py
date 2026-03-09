@@ -5,9 +5,11 @@ import argparse
 import copy
 import json
 import os
+from pathlib import Path
 from typing import Any
 
 import wandb
+import yaml
 
 
 MODEL_ALIASES = {
@@ -68,6 +70,7 @@ DEFAULT_SPECS: dict[str, dict[str, Any]] = {
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Create and run W&B sweeps for LeHome training.")
     parser.add_argument("--model", default="xvla", help="act / diffusion / dp / smolvla / xvla")
+    parser.add_argument("--config-file", default=None, help="Optional JSON/YAML sweep spec overlay")
     parser.add_argument("--project", default=None, help="W&B project name override")
     parser.add_argument("--entity", default=None, help="W&B entity/team")
     parser.add_argument("--api-key-env", default="WANDB_API_KEY", help="Environment variable holding the W&B API key")
@@ -84,8 +87,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--steps", type=int, default=None, help="Override fixed training steps in the sweep")
     parser.add_argument("--min-iter", type=int, default=3, help="Hyperband minimum iterations")
     parser.add_argument("--name", default=None, help="Sweep display name")
+    parser.add_argument(
+        "--wandb-mode",
+        default="online",
+        choices=["online", "offline", "disabled"],
+        help="Training-side wandb mode passed to lerobot-train",
+    )
+    parser.add_argument("--disable-artifact", action="store_true", help="Pass --wandb.disable_artifact=true to training")
+    parser.add_argument("--job-name", default=None, help="Override lerobot train job_name for all sweep runs")
+    parser.add_argument("--notes", default=None, help="Optional W&B notes passed to training")
+    parser.add_argument(
+        "--train-arg",
+        action="append",
+        default=[],
+        help="Extra argument forwarded to run_train.sh; may be repeated",
+    )
     parser.add_argument("--create-only", action="store_true", help="Create the sweep but do not start an agent")
     parser.add_argument("--dry-run", action="store_true", help="Print the generated sweep config and exit")
+    parser.add_argument("--print-project", action="store_true", help="Print the resolved W&B project and exit")
     return parser.parse_args()
 
 
@@ -105,11 +124,42 @@ def normalize_model(model: str) -> str:
         raise SystemExit(f"Unsupported model: {model}. Choose from act / diffusion / dp / smolvla / xvla.") from exc
 
 
+def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    for key, value in override.items():
+        if isinstance(base.get(key), dict) and isinstance(value, dict):
+            deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
+def load_spec_overlay(path_str: str) -> dict[str, Any]:
+    path = Path(path_str)
+    if not path.exists():
+        raise SystemExit(f"Sweep config file not found: {path}")
+
+    with path.open("r", encoding="utf-8") as handle:
+        if path.suffix.lower() in {".yaml", ".yml"}:
+            data = yaml.safe_load(handle)
+        elif path.suffix.lower() == ".json":
+            data = json.load(handle)
+        else:
+            raise SystemExit(f"Unsupported sweep config extension: {path.suffix}. Use .json / .yaml / .yml")
+
+    if not isinstance(data, dict):
+        raise SystemExit(f"Sweep config overlay must be a mapping: {path}")
+    if "command" in data or "program" in data:
+        raise SystemExit("Sweep config overlay must not override program/command; use --train-arg for repo-specific train args.")
+    return data
+
+
 def build_sweep_config(args: argparse.Namespace) -> tuple[str, dict[str, Any], str | None]:
     model = normalize_model(args.model)
     spec = copy.deepcopy(DEFAULT_SPECS[model])
+    if args.config_file:
+        spec = deep_merge(spec, load_spec_overlay(args.config_file))
     if args.steps is not None:
-        spec["parameters"]["steps"] = {"value": args.steps}
+        spec.setdefault("parameters", {})["steps"] = {"value": args.steps}
 
     project = args.project or spec["project"]
     metric_name = args.metric_name or spec["metric"]["name"]
@@ -120,21 +170,32 @@ def build_sweep_config(args: argparse.Namespace) -> tuple[str, dict[str, Any], s
         "run_train.sh",
         model,
         "--wandb.enable=true",
+        f"--wandb.mode={args.wandb_mode}",
         f"--wandb.project={project}",
-        "${args}",
     ]
     if args.entity:
-        command.insert(-1, f"--wandb.entity={args.entity}")
+        command.append(f"--wandb.entity={args.entity}")
+    if args.disable_artifact:
+        command.append("--wandb.disable_artifact=true")
+    if args.notes:
+        command.append(f"--wandb.notes={args.notes}")
+    if args.job_name:
+        command.append(f"--job_name={args.job_name}")
+    command.extend(args.train_arg)
+    command.append("${args}")
 
     sweep_config: dict[str, Any] = {
-        "name": args.name or f"{model}-sweep",
-        "method": args.method,
+        "name": args.name or spec.get("name") or f"{model}-sweep",
+        "method": args.method if args.method is not None else spec.get("method", "bayes"),
         "metric": {"name": metric_name, "goal": metric_goal},
         "parameters": spec["parameters"],
         "program": "run_train.sh",
         "command": command,
     }
-    if args.min_iter > 0:
+
+    if "early_terminate" in spec:
+        sweep_config["early_terminate"] = spec["early_terminate"]
+    elif args.min_iter > 0:
         sweep_config["early_terminate"] = {"type": "hyperband", "min_iter": args.min_iter}
 
     return model, sweep_config, project
@@ -142,13 +203,17 @@ def build_sweep_config(args: argparse.Namespace) -> tuple[str, dict[str, Any], s
 
 def main() -> int:
     args = parse_args()
-    configure_wandb_api(args)
     model, sweep_config, project = build_sweep_config(args)
+
+    if args.print_project:
+        print(project)
+        return 0
 
     if args.dry_run:
         print(json.dumps(sweep_config, indent=2, ensure_ascii=False))
         return 0
 
+    configure_wandb_api(args)
     sweep_id = wandb.sweep(sweep_config, project=project, entity=args.entity)
     print(f"Created sweep for {model}: {sweep_id}")
 
@@ -156,7 +221,7 @@ def main() -> int:
         print(f"Start later with: wandb agent {sweep_id}")
         return 0
 
-    wandb.agent(sweep_id, count=args.count)
+    wandb.agent(sweep_id, count=args.count, entity=args.entity, project=project)
     return 0
 
 
