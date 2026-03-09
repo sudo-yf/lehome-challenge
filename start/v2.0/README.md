@@ -1,21 +1,21 @@
 # LeHome Challenge Workflow v2
 
-`v2/` 保留原仓库不动，把主流程收敛成 `step1 / step2 / step3` 三步。
+`start/v2.0/` 保留原仓库不动，把主流程收敛成 `step1 / step2 / step3` 三步。
 
 ## 推荐顺序
 
-1. `bash v2/vpn.sh`（可选，网络不稳时再开）
-2. `bash v2/step1.sh [--install-system-libs]`
-3. `bash v2/step2.sh`
-4. `bash v2/step3.sh [--with-full-dataset]`
-5. `bash v2/train.sh ...`
-6. `bash v2/eval.sh ...`
-7. `bash v2/save.sh <version>`
+1. `bash start/v2.0/vpn.sh`（可选，网络不稳时再开）
+2. `bash start/v2.0/step1.sh [--install-system-libs]`
+3. `bash start/v2.0/step2.sh`
+4. `bash start/v2.0/step3.sh [--with-full-dataset]`
+5. `bash start/v2.0/train.sh ...`
+6. `bash start/v2.0/eval.sh ...`
+7. `bash start/v2.0/save.sh <version>`
 
 也可以直接一条命令跑主流程：
 
 ```bash
-bash v2/setup.sh --install-system-libs --with-full-dataset
+bash start/v2.0/setup.sh --install-system-libs --with-full-dataset
 ```
 
 ## 三步职责
@@ -27,8 +27,9 @@ bash v2/setup.sh --install-system-libs --with-full-dataset
 ## 工具脚本
 
 - `vpn.sh`：代理/加速，可选
-- `train.sh`：训练入口
-- `eval.sh`：评估入口
+- `train.sh`：通用训练入口
+- `eval.sh`：通用评估入口
+- `xvla.sh`：X-VLA 专用 install/train/eval 一体脚本
 - `save.sh`：备份/打版本
 
 ## `just` 用法
@@ -36,11 +37,15 @@ bash v2/setup.sh --install-system-libs --with-full-dataset
 进入 `v2/` 后可以直接使用：
 
 ```bash
-cd v2
+cd start/v2.0
 just step1 --install-system-libs
 just step2
 just step3 --with-full-dataset
 just train act 1000
 just eval act
+just xvla
 just save 1
 ```
+
+
+`xvla.sh` 会优先从 `configs/train_xvla.yaml` 自动读取 `dataset.repo_id`、`dataset.root`、`policy.repo_id`、`policy.pretrained_path`、`output_dir`、`steps` 等默认值；通常只需要手动调整 `HF_TOKEN`（如需私有仓库）和 `WORK_MODE`。

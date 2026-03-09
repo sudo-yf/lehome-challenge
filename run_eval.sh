@@ -2,10 +2,20 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="$SCRIPT_DIR/$(basename -- "${BASH_SOURCE[0]}")"
 PROJECT_ROOT="$SCRIPT_DIR"
 LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
 cd "$PROJECT_ROOT"
+
+if [[ "${LEHOME_EVAL_XVFB_WRAPPED:-0}" != "1" ]]; then
+    if ! command -v xvfb-run >/dev/null 2>&1; then
+        echo "❌ 未找到 xvfb-run，请先安装/启用 xvfb-run 后再评估。"
+        exit 1
+    fi
+    echo "🖥️ 评估默认启用 xvfb-run -a；正在进入虚拟显示环境..."
+    exec xvfb-run -a env LEHOME_EVAL_XVFB_WRAPPED=1 bash "$SCRIPT_PATH" "$@"
+fi
 
 CACHE_ROOT="$PROJECT_ROOT/.cache"
 HF_CACHE_ROOT="$CACHE_ROOT/huggingface"
@@ -45,9 +55,12 @@ case "$MODEL" in
     smolvla)
         DEFAULT_RUN_DIR="outputs/train/smolvla_top_long"
         ;;
+    xvla)
+        DEFAULT_RUN_DIR="outputs/train/top_long/xvla_base_3w_steps"
+        ;;
     *)
         echo "❌ 不支持的模型: $MODEL"
-        echo "可选: act / diffusion / smolvla（兼容别名: dp）"
+        echo "可选: act / diffusion（兼容别名: dp） / smolvla / xvla"
         exit 1
         ;;
 esac
@@ -79,6 +92,7 @@ echo "🧪 评估模型: $MODEL"
 echo "📦 模型路径: $POLICY_PATH"
 echo "📚 数据路径: $DATASET_ROOT"
 echo "📝 日志文件: logs/$LOG_NAME"
+echo "🖥️ xvfb 状态: enabled (DISPLAY=${DISPLAY:-unset})"
 
 if [[ ! -d "$DATASET_ROOT" ]]; then
     echo "⚠️ dataset_root 目录不存在: $DATASET_ROOT"
@@ -90,14 +104,26 @@ if [[ ! -d "$POLICY_PATH" ]]; then
 fi
 
 HAS_TASK_DESCRIPTION=0
+HAS_HEADLESS=0
 for arg in "${EXTRA_ARGS[@]}"; do
     if [[ "$arg" == "--task_description" || "$arg" == --task_description=* ]]; then
         HAS_TASK_DESCRIPTION=1
-        break
+    fi
+    if [[ "$arg" == "--headless" ]]; then
+        HAS_HEADLESS=1
     fi
 done
 if [[ "$MODEL" == "smolvla" && $HAS_TASK_DESCRIPTION -eq 0 ]]; then
     EXTRA_ARGS+=(--task_description "fold the garment on the table")
+fi
+if [[ $HAS_HEADLESS -eq 0 ]]; then
+    EXTRA_ARGS+=(--headless)
+    echo "🧱 默认附加参数: --headless"
+else
+    echo "🧱 检测到显式参数: --headless"
+fi
+if (( ${#EXTRA_ARGS[@]} > 0 )); then
+    echo "🧾 额外参数: ${EXTRA_ARGS[*]}"
 fi
 
 set +e

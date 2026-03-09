@@ -9,6 +9,14 @@ We provide both LeRobot policy formats and custom policy formats.
 Evaluate trained LeRobot models (ACT, Diffusion Policy, SmolVLA):
 
 ```bash
+just eval act outputs/train/act_top_long/checkpoints/last/pretrained_model top_long 5 Datasets/example/top_long_merged
+```
+
+This wrapper now defaults to `xvfb-run -a` and automatically appends `--headless`, so you do not need to write them manually in the common case. If you still run `xvfb-run -a just eval ... --headless`, the script remains compatible.
+
+Underlying command shape (for direct debugging):
+
+```bash
 python -m scripts.eval \
     --policy_type lerobot \
     --policy_path outputs/train/act_top_long/checkpoints/last/pretrained_model \
@@ -16,7 +24,8 @@ python -m scripts.eval \
     --dataset_root Datasets/example/top_long_merged \
     --num_episodes 5 \
     --enable_cameras \
-    --device cpu
+    --device cpu \
+    --headless
 ```
 
 > 💡 **Tip:** Using `--device cpu` ensures the simulator runs on CPU to avoid GUI conflicts in some environments, while the actual policy (LeRobot or Custom) will still be loaded to CUDA for fast inference. `--enable_cameras` is required to see camera views in the GUI or record videos.

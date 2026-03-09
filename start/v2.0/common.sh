@@ -2,7 +2,7 @@
 set -euo pipefail
 
 V2_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd -- "$V2_DIR/.." && pwd)"
+PROJECT_ROOT="$(cd -- "$V2_DIR/../.." && pwd)"
 
 BLUE='\033[0;34m'
 GREEN='\033[0;32m'

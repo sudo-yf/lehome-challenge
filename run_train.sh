@@ -45,9 +45,12 @@ case "$MODEL" in
     smolvla)
         CONFIG="configs/train_smolvla.yaml"
         ;;
+    xvla)
+        CONFIG="configs/train_xvla.yaml"
+        ;;
     *)
         echo "❌ 不支持的模型: $MODEL"
-        echo "可选: act / diffusion / smolvla（兼容别名: dp）"
+        echo "可选: act / diffusion（兼容别名: dp） / smolvla / xvla"
         exit 1
         ;;
 esac

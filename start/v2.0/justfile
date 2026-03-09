@@ -24,5 +24,8 @@ train *args:
 eval *args:
     bash eval.sh {{args}}
 
+xvla *args:
+    bash xvla.sh {{args}}
+
 save version:
     bash save.sh {{version}}

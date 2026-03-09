@@ -32,7 +32,7 @@ save version:
 train *args:
     bash run_train.sh {{args}}
 
-# 评估模型 (示例: just eval act outputs/train/act_top_long/checkpoints/last/pretrained_model top_long 5 Datasets/example/top_long_merged)
+# 评估模型（默认启用 xvfb-run -a + --headless；示例: just eval act outputs/train/act_top_long/checkpoints/last/pretrained_model top_long 5 Datasets/example/top_long_merged)
 eval *args:
     bash run_eval.sh {{args}}
 

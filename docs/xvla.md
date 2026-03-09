@@ -157,6 +157,13 @@ lerobot-train \
 
 To ensure stable optimization, the Vision-Language Model (VLM) must be trained with only 1/10 of the base learning rate, while all other components use the full LR.
 This LR ratio is crucial for achieving strong and stable finetuning performance. This is already done for you by default.
+
+Repository note: in this repo, "by default" assumes `use_policy_training_preset=true` (the LeRobot default). If you disable that flag and manually configure top-level `optimizer.type: xvla-adamw`, training falls back to `policy.parameters()` instead of `policy.get_optim_params()`, bypasses X-VLA's named-parameter path, and triggers the custom-LR optimizer assertion.
+
+For X-VLA in this repo, keep optimization wired through the policy preset path and customize it via `policy.optimizer_lr`, `policy.optimizer_betas`, `policy.optimizer_eps`, `policy.optimizer_weight_decay`, `policy.optimizer_grad_clip_norm`, `policy.scheduler_warmup_steps`, `policy.scheduler_decay_steps`, and `policy.scheduler_decay_lr`.
+
+The official preset defaults in the local LeRobot install come from `.venv/lib/python3.11/site-packages/lerobot/policies/xvla/configuration_xvla.py`: base LR `1e-4`, warmup `1000`, decay steps `30000`, and decay LR `2.5e-6`. Combined with the X-VLA optimizer's built-in 0.1 VLM LR ratio, this yields an effective VLM LR of `1e-5`.
+
 ❕Note
 
 Completely matching the official reported performance may require an additional warm-up LR schedule for soft-prompts, which can bring minor improvements.
@@ -508,5 +515,4 @@ If you use X-VLA in your research, please cite:
 ## Contributing
 
 We welcome contributions! If you've implemented a new action mode or processor for your robot, please consider submitting a PR to help the community.
-
 
