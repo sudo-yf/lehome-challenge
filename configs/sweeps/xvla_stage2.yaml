@@ -1,0 +1,22 @@
+name: xvla-stage2-long
+method: bayes
+project: lehome_xvla_sweep_stage2
+metric:
+  name: train/loss
+  goal: minimize
+parameters:
+  batch_size:
+    value: 8
+  steps:
+    values: [10000, 30000]
+  policy.optimizer_lr:
+    distribution: log_uniform_values
+    min: 1.0e-5
+    max: 4.0e-5
+  policy.optimizer_weight_decay:
+    values: [0.0, 1.0e-4]
+  policy.scheduler_warmup_steps:
+    values: [1000, 2000]
+early_terminate:
+  type: hyperband
+  min_iter: 3

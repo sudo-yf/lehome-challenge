@@ -5,6 +5,7 @@ import argparse
 import copy
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -100,7 +101,7 @@ def parse_args() -> argparse.Namespace:
         "--train-arg",
         action="append",
         default=[],
-        help="Extra argument forwarded to run_train.sh; may be repeated",
+        help="Extra argument forwarded to lehome/train.sh; may be repeated",
     )
     parser.add_argument("--create-only", action="store_true", help="Create the sweep but do not start an agent")
     parser.add_argument("--dry-run", action="store_true", help="Print the generated sweep config and exit")
@@ -126,6 +127,10 @@ def normalize_model(model: str) -> str:
 
 def deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     for key, value in override.items():
+        if key == "parameters" and isinstance(base.get(key), dict) and isinstance(value, dict):
+            for param_name, param_config in value.items():
+                base[key][param_name] = copy.deepcopy(param_config)
+            continue
         if isinstance(base.get(key), dict) and isinstance(value, dict):
             deep_merge(base[key], value)
         else:
@@ -153,6 +158,31 @@ def load_spec_overlay(path_str: str) -> dict[str, Any]:
     return data
 
 
+
+
+def normalize_sweep_parameters(raw_parameters: dict[str, Any]) -> tuple[dict[str, Any], list[tuple[str, str]]]:
+    normalized_parameters: dict[str, Any] = {}
+    cli_mappings: list[tuple[str, str]] = []
+
+    for original_name, raw_config in raw_parameters.items():
+        if not isinstance(raw_config, dict):
+            raise SystemExit(f"Sweep parameter '{original_name}' must map to a config object.")
+
+        config = copy.deepcopy(raw_config)
+        cli_arg = config.pop("arg_name", original_name)
+        sweep_name = config.pop("wandb_name", re.sub(r"[^0-9A-Za-z_]+", "_", original_name).strip("_"))
+        if not sweep_name:
+            raise SystemExit(f"Sweep parameter '{original_name}' resolves to an empty W&B name.")
+        if sweep_name in normalized_parameters:
+            raise SystemExit(
+                f"Sweep parameter '{original_name}' collides with an existing W&B parameter name '{sweep_name}'."
+            )
+
+        normalized_parameters[sweep_name] = config
+        cli_mappings.append((sweep_name, cli_arg))
+
+    return normalized_parameters, cli_mappings
+
 def build_sweep_config(args: argparse.Namespace) -> tuple[str, dict[str, Any], str | None]:
     model = normalize_model(args.model)
     spec = copy.deepcopy(DEFAULT_SPECS[model])
@@ -164,10 +194,11 @@ def build_sweep_config(args: argparse.Namespace) -> tuple[str, dict[str, Any], s
     project = args.project or spec["project"]
     metric_name = args.metric_name or spec["metric"]["name"]
     metric_goal = args.metric_goal or spec["metric"]["goal"]
+    normalized_parameters, cli_mappings = normalize_sweep_parameters(spec["parameters"])
 
     command = [
         "bash",
-        "run_train.sh",
+        "lehome/train.sh",
         model,
         "--wandb.enable=true",
         f"--wandb.mode={args.wandb_mode}",
@@ -182,14 +213,15 @@ def build_sweep_config(args: argparse.Namespace) -> tuple[str, dict[str, Any], s
     if args.job_name:
         command.append(f"--job_name={args.job_name}")
     command.extend(args.train_arg)
-    command.append("${args}")
+    for sweep_name, cli_arg in cli_mappings:
+        command.append(f"--{cli_arg}=${{{sweep_name}}}")
 
     sweep_config: dict[str, Any] = {
         "name": args.name or spec.get("name") or f"{model}-sweep",
         "method": args.method if args.method is not None else spec.get("method", "bayes"),
         "metric": {"name": metric_name, "goal": metric_goal},
-        "parameters": spec["parameters"],
-        "program": "run_train.sh",
+        "parameters": normalized_parameters,
+        "program": "lehome/train.sh",
         "command": command,
     }
 

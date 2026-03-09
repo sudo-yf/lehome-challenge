@@ -30,5 +30,8 @@ wandb *args:
 sweep *args:
     bash allinone.sh sweep {{args}}
 
-save version:
-    bash allinone.sh save {{version}}
+save *args:
+    bash allinone.sh save {{args}}
+
+versions:
+    bash allinone.sh versions

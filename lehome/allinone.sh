@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
+source "$SCRIPT_DIR/versioning.sh"
 
 usage() {
     cat <<'USAGE'
@@ -18,13 +19,15 @@ Usage: bash lehome/allinone.sh <command> [args...]
   wandb [args...]
   sweep [args...]
   vpn [args...]
-  save <version>
+  save <version> [note...]
+  versions
 
 示例：
   bash lehome/allinone.sh setup --install-system-libs --with-full-dataset
   bash lehome/allinone.sh prepare --install-system-libs
   bash lehome/allinone.sh train act 1000
   bash lehome/allinone.sh xvla
+  bash lehome/allinone.sh versions
 USAGE
 }
 
@@ -93,7 +96,10 @@ case "$COMMAND" in
         exec bash "$SCRIPT_DIR/v1/step_vpn.sh" "$@"
         ;;
     save)
-        exec bash "$SCRIPT_DIR/v1/step_git.sh" "$@"
+        save_version "$@"
+        ;;
+    versions)
+        show_versions
         ;;
     -h|--help|help|"")
         usage

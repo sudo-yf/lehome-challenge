@@ -30,5 +30,8 @@ wandb *args:
 sweep *args:
     bash lehome/sweep.sh {{args}}
 
-save version:
-    bash lehome/allinone.sh save {{version}}
+save *args:
+    bash lehome/allinone.sh save {{args}}
+
+versions:
+    bash lehome/allinone.sh versions

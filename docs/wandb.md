@@ -141,9 +141,11 @@ The `wandb.config` object stores and tracks hyperparameters and settings for you
 ### Repository-specific differences you need to know
 
 - `scripts/wandb_sweep.py` 不再只传 `--wandb.enable=true`，还会显式传 `--wandb.mode=online`。这是因为 `configs/train_xvla.yaml` 默认写了 `wandb.mode: disabled`；如果不覆盖，sweep 虽然能创建，但训练侧不会真正把指标上报到 W&B。
+- `scripts/wandb_sweep.py` 现在还会把像 `policy.optimizer_lr` 这样的 LeRobot 参数名自动规范化成 W&B 可接受的 sweep 参数名（例如 `policy_optimizer_lr`），并在 `command` 里显式展开回 `--policy.optimizer_lr=...`。这是为了解决 W&B API 对超参数名校验更严格时的 400 错误。
+- 当你用 `configs/sweeps/xvla_stage2.yaml` 这类 overlay 覆盖默认 sweep 参数时，仓库现在会把单个参数块按“整体替换”处理，而不是递归合并。这样可以避免生成非法配置，例如 `batch_size` 同时带 `values` 和 `value`，进而触发 `Invalid sweep config: invalid hyperparameter configuration: batch_size`。
 - `lehome/sweep.sh --preflight` / `PRECHECK=true` 会先跑一个轻量 online run，验证 key、project、entity 与同步链路，再退出；它不会创建 sweep。
 - sweep 的目标指标默认使用 LeRobot 训练里实际会上报的 `train/loss`。
-- 需要给训练额外透传参数时，不直接改 `command`，而是通过 `lehome/sweep.sh ... -- <train-args>` 或 `scripts/wandb_sweep.py --train-arg ...` 追加到 `run_train.sh`。
+- 需要给训练额外透传参数时，不直接改 `command`，而是通过 `lehome/sweep.sh ... -- <train-args>` 或 `scripts/wandb_sweep.py --train-arg ...` 追加到当前训练入口 `lehome/train.sh`。
 
 ### Recommended repo workflow
 
@@ -184,6 +186,8 @@ WANDB_ENV_FILE=/root/data/wandb.md CREATE_ONLY=true bash lehome/sweep.sh --model
 ### Common repo examples
 
 可选地，也可以把 sweep 搜索空间写进 `configs/sweeps/xvla_wandb.yaml`，再通过 `SWEEP_CONFIG_PATH=...` 载入。
+
+Stage 2 长训建议使用单独 overlay，例如 `configs/sweeps/xvla_stage2.yaml`；这类文件里的参数块（如 `batch_size`、`steps`）会整体覆盖默认模板，而不是和默认值混合。
 
 ```bash
 PRECHECK=true WANDB_ENV_FILE=/root/data/wandb.md bash lehome/sweep.sh --model xvla
