@@ -7,12 +7,27 @@ LOG_DIR="$PROJECT_ROOT/logs"
 mkdir -p "$LOG_DIR"
 cd "$PROJECT_ROOT"
 
+CACHE_ROOT="$PROJECT_ROOT/.cache"
+HF_CACHE_ROOT="$CACHE_ROOT/huggingface"
+TORCH_CACHE_ROOT="$CACHE_ROOT/torch"
+mkdir -p "$HF_CACHE_ROOT/datasets" "$HF_CACHE_ROOT/hub" "$HF_CACHE_ROOT/transformers" "$TORCH_CACHE_ROOT/hub/checkpoints"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$CACHE_ROOT}"
+export HF_HOME="${HF_HOME:-$HF_CACHE_ROOT}"
+export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-$HF_CACHE_ROOT/datasets}"
+export HF_HUB_CACHE="${HF_HUB_CACHE:-$HF_CACHE_ROOT/hub}"
+export HUGGINGFACE_HUB_CACHE="${HUGGINGFACE_HUB_CACHE:-$HF_HUB_CACHE}"
+export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-$HF_CACHE_ROOT/transformers}"
+export TORCH_HOME="${TORCH_HOME:-$TORCH_CACHE_ROOT}"
+
 if [[ ! -f ".venv/bin/activate" ]]; then
     echo "❌ 未找到虚拟环境: $PROJECT_ROOT/.venv/bin/activate"
     echo "请先执行: just s1"
     exit 1
 fi
+export PS1="${PS1-}"
+set +u
 source .venv/bin/activate
+set -u
 
 MODEL="${1:-act}"
 if [[ $# -gt 0 ]]; then
