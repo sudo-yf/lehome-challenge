@@ -6,7 +6,7 @@ source "$SCRIPT_DIR/common.sh"
 
 usage() {
     cat <<'USAGE'
-Usage: bash v2/10-install.sh [--install-system-libs]
+Usage: bash start/v2.0/install.sh [--install-system-libs]
 
 - --install-system-libs  安装 IsaacSim 需要的系统图形库
 USAGE

@@ -6,7 +6,7 @@ source "$SCRIPT_DIR/common.sh"
 
 usage() {
     cat <<'USAGE'
-Usage: bash v2/20-finalize.sh
+Usage: bash start/v2.0/finalize.sh
 
 执行 IsaacSim EULA 授权、建立 _isaac_sim 软链接，并写入轻量 shell 快捷命令。
 USAGE
@@ -61,7 +61,7 @@ go() {{
     cd "{project_root}" && source .venv/bin/activate
 }}
 lehome-save() {{
-    bash "{project_root}/v2/save.sh" "$@"
+    bash "{project_root}/start/v2.0/save.sh" "$@"
 }}
 # --- End LeHome v2 ---'''
 body = "\n".join(out).rstrip()

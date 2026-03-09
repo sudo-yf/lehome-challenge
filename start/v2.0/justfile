@@ -6,14 +6,14 @@ default:
 vpn *args:
     bash vpn.sh {{args}}
 
-step1 *args:
-    bash step1.sh {{args}}
+install *args:
+    bash install.sh {{args}}
 
-step2:
-    bash step2.sh
+finalize:
+    bash finalize.sh
 
-step3 *args:
-    bash step3.sh {{args}}
+data *args:
+    bash data.sh {{args}}
 
 setup *args:
     bash setup.sh {{args}}
@@ -26,6 +26,12 @@ eval *args:
 
 xvla *args:
     bash xvla.sh {{args}}
+
+wandb *args:
+    bash wandb.sh {{args}}
+
+allinone *args:
+    bash allinone.sh {{args}}
 
 save version:
     bash save.sh {{version}}

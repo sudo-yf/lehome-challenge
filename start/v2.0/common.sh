@@ -31,6 +31,10 @@ project_root() {
     echo "$PROJECT_ROOT"
 }
 
+v2_root() {
+    echo "$V2_DIR"
+}
+
 ensure_repo_root() {
     [[ -f "$PROJECT_ROOT/pyproject.toml" ]] || die "❌ 找不到项目根目录: $PROJECT_ROOT"
     cd "$PROJECT_ROOT"
@@ -156,4 +160,40 @@ safe_symlink() {
 
     ln -s "$target" "$link_path"
     ok "✅ 已建立软链接: $link_path -> $target"
+}
+
+v2_script_path() {
+    local script="$1"
+    printf '%s/%s\n' "$V2_DIR" "$script"
+}
+
+repo_script_path() {
+    local script="$1"
+    printf '%s/%s\n' "$PROJECT_ROOT" "$script"
+}
+
+invoke_v2_script() {
+    local script="$1"
+    shift
+    bash "$(v2_script_path "$script")" "$@"
+}
+
+exec_v2_script() {
+    local script="$1"
+    shift
+    exec bash "$(v2_script_path "$script")" "$@"
+}
+
+invoke_repo_script() {
+    local script="$1"
+    shift
+    ensure_repo_root
+    bash "$(repo_script_path "$script")" "$@"
+}
+
+exec_repo_script() {
+    local script="$1"
+    shift
+    ensure_repo_root
+    exec bash "$(repo_script_path "$script")" "$@"
 }
