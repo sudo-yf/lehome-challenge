@@ -188,6 +188,29 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+
+
+def resolve_workspace_root(bundle_root: Path) -> Path:
+    env_root = os.environ.get("LEHOME_WORKSPACE_ROOT")
+    candidates: list[Path] = []
+    if env_root:
+        candidates.append(Path(env_root))
+    candidates.extend([Path.cwd(), *Path.cwd().parents, bundle_root, *bundle_root.parents])
+
+    seen: set[str] = set()
+    for candidate in candidates:
+        resolved = candidate.resolve()
+        key = str(resolved)
+        if key in seen:
+            continue
+        seen.add(key)
+        if (resolved / "pyproject.toml").exists():
+            return resolved
+
+    raise SystemExit(
+        "Unable to resolve LEHOME workspace root. Set LEHOME_WORKSPACE_ROOT to the repository root that contains pyproject.toml."
+    )
+
 def configure_wandb_api(args: argparse.Namespace) -> None:
     if args.base_url:
         os.environ["WANDB_BASE_URL"] = args.base_url
@@ -609,8 +632,9 @@ def train_trial(context: RuntimeContext) -> None:
         run.finish(exit_code=0)
 
 
-def build_resume_command(args: argparse.Namespace, model: str, sweep_id: str) -> str:
-    parts = ["python", "scripts/wandb_sweep.py", "--model", model, "--sweep-id", sweep_id]
+def build_resume_command(args: argparse.Namespace, model: str, sweep_id: str, script_path: str | None = None) -> str:
+    script_entry = script_path or "scripts/wandb_sweep.py"
+    parts = ["python", script_entry, "--model", model, "--sweep-id", sweep_id]
     if args.config_file:
         parts.extend(["--config-file", args.config_file])
     if args.train_config:
@@ -652,8 +676,10 @@ def main() -> int:
     validate_mode_combinations(args)
     model, sweep_config, project, mapping = build_sweep_config(args)
     parsed_train_args = parse_train_args(list(args.train_arg))
-    repo_root = Path(__file__).resolve().parent.parent
-    train_config_path = resolve_train_config_path(repo_root, model, args.train_config)
+    bundle_root = Path(__file__).resolve().parent.parent
+    workspace_root = resolve_workspace_root(bundle_root)
+    os.chdir(workspace_root)
+    train_config_path = resolve_train_config_path(bundle_root, model, args.train_config)
 
     if args.print_project:
         print(project)
@@ -669,7 +695,7 @@ def main() -> int:
         project=project,
         args=args,
         mapping=mapping,
-        repo_root=repo_root,
+        repo_root=workspace_root,
         base_config_path=train_config_path,
         parsed_train_args=parsed_train_args,
     )
@@ -681,10 +707,10 @@ def main() -> int:
                 model,
                 train_config_path,
                 parsed_train_args.cli_args,
-                repo_root=repo_root,
+                repo_root=workspace_root,
             )
             bundle = build_repro_bundle(
-                repo_root=repo_root,
+                repo_root=workspace_root,
                 project=project,
                 entity=args.entity,
                 model=model,
@@ -697,8 +723,13 @@ def main() -> int:
         sweep_id = wandb.sweep(sweep_config, project=project, entity=args.entity)
         print(f"Created sweep for {model}: {sweep_id}")
         if args.create_only:
-            print(f"Resume later with script: {build_resume_command(args, model, sweep_id)}")
-            print(f"Resume later with shell: bash lehome/sweep.sh --model {model} --sweep-id {sweep_id}")
+            attach_script = str(bundle_root / "bin" / "attach_sweep.sh")
+            print(
+                f"Resume later with script: {build_resume_command(args, model, sweep_id, script_path=str(bundle_root / 'scripts' / 'wandb_sweep.py'))}"
+            )
+            print(
+                f"Resume later with shell: SWEEP_ID={sweep_id} COUNT={args.count} bash {attach_script}"
+            )
             return 0
 
     wandb.agent(

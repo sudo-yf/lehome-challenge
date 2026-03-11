@@ -1,27 +1,31 @@
-name: xvla-stage2-performance-narrow
+name: xvla-eval-narrow-30k
 method: bayes
-project: lehome_xvla_sweep_stage2
+project: lehome_xvla_eval_narrow
 metric:
-  name: train/loss
-  goal: minimize
+  name: eval/pc_success
+  goal: maximize
 parameters:
   batch_size:
-    value: 8
+    values: [4, 8]
   steps:
     value: 30000
-  log_freq:
-    value: 100
   policy_optimizer_lr:
     arg_name: policy.optimizer_lr
     distribution: log_uniform_values
-    min: 1.3e-5
-    max: 2.9e-5
+    min: 1.8e-5
+    max: 2.8e-5
   policy_optimizer_weight_decay:
     arg_name: policy.optimizer_weight_decay
     values: [0.0, 1.0e-4]
   policy_scheduler_warmup_steps:
     arg_name: policy.scheduler_warmup_steps
-    values: [1000]
+    value: 1000
+  policy_scheduler_decay_steps:
+    arg_name: policy.scheduler_decay_steps
+    value: 30000
+  policy_scheduler_decay_lr:
+    arg_name: policy.scheduler_decay_lr
+    value: 2.5e-6
 early_terminate:
   type: hyperband
-  min_iter: 3
+  min_iter: 2000

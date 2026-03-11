@@ -1,6 +1,3 @@
-# X-VLA Final Valid Config for Lehome
-# Precision-aligned with official checkpoint
-
 dataset:
   repo_id: lehome/dataset_challenge_merged
   root: Datasets/example/top_long_merged
@@ -37,29 +34,33 @@ dataset:
         kwargs:
           sharpness: [0.5, 1.5]
 
+env:
+  type: lehome
+  task: LeHome-BiSO101-Direct-Garment-v2
+  task_description: fold the garment on the table
+  garment_name: Top_Long_Unseen_0
+  garment_version: Release
+  garment_cfg_base_path: Assets/objects/Challenge_Garment
+  particle_cfg_path: source/lehome/lehome/tasks/bedroom/config_file/particle_garment_cfg.yaml
+  use_random_seed: false
+  random_seed: 42
+  max_parallel_tasks: 1
+  disable_env_checker: true
+
 policy:
   type: xvla
   repo_id: lehome/xvla_so100
   push_to_hub: false
   pretrained_path: lerobot/xvla-base
-  # [核心修复1] 强制对齐动作步长 (32 -> 30)
   n_action_steps: 30
   chunk_size: 30
-  # [核心修复2] 匹配预训练模型的视角数量 (3个视角)
-  empty_cameras: 0 # 预训练模型使用3个真实视角
-
-  # [核心修复3] 使用auto action mode自动适配数据集的action维度
+  empty_cameras: 0
   action_mode: auto
-  max_action_dim: 20 # 与预训练模型保持一致
-  max_state_dim: 20 # 官方默认值，支持更大维度的数据集
-
-  # [核心修复4] 匹配预训练模型的视角数量
-  num_image_views: 3 # 预训练模型使用3个视角（2真实+1空）
-  # [核心修复3] 图像缩放
+  max_action_dim: 20
+  max_state_dim: 20
+  num_image_views: 3
   resize_imgs_with_padding: [224, 224]
-  # 显存优化
   dtype: bfloat16
-  # [关键] 必须显式提供，否则报 ValueError
   florence_config:
     projection_dim: 1024
     vision_config:
@@ -81,9 +82,7 @@ policy:
       visual_temporal_embedding:
         type: COSINE
         max_temporal_embeddings: 100
-      # 显式指定特征源，确保每个视角只产生 2 个 token
       image_feature_source: ["spatial_avg_pool", "temporal_avg_pool"]
-
     text_config:
       vocab_size: 51289
       d_model: 1024
@@ -92,12 +91,15 @@ policy:
       encoder_attention_heads: 16
       decoder_attention_heads: 16
       max_position_embeddings: 4096
-
-  # 微调策略
   freeze_vision_encoder: false
   freeze_language_encoder: false
   train_policy_transformer: true
   train_soft_prompts: true
+  optimizer_lr: 2.5e-5
+  optimizer_weight_decay: 1.0e-4
+  scheduler_warmup_steps: 1000
+  scheduler_decay_steps: 30000
+  scheduler_decay_lr: 2.5e-6
   input_features:
     observation.state:
       type: STATE
@@ -111,37 +113,31 @@ policy:
     observation.images.right_rgb:
       type: VISUAL
       shape: [3, 480, 640]
-
   output_features:
     action:
       type: ACTION
       shape: [12]
 
-# 训练参数
-output_dir: outputs/train/top_long/xvla_base_3w_steps_final
+output_dir: outputs/train/top_long/xvla_30k_better_than_baseline
+job_name: xvla_30k_better_than_baseline
+use_policy_training_preset: true
 batch_size: 8
 steps: 30000
 save_freq: 5000
-eval_freq: 5000
+eval_freq: 2000
 log_freq: 1000
 save_checkpoint: true
 
-optimizer:
-  type: xvla-adamw
-  lr: 2e-5
-  weight_decay: 1e-4
-  betas: [0.9, 0.999]
-  eps: 1e-8
-  grad_clip_norm: 10.0
-
-scheduler:
-  type: cosine_decay_with_warmup
-  num_warmup_steps: 1000
-  num_decay_steps: 29000
-  peak_lr: 2e-5
-  decay_lr: 0.0
+eval:
+  n_episodes: 5
+  batch_size: 1
+  use_async_envs: false
 
 wandb:
   enable: false
+  disable_artifact: false
   project: lehome_xvla
+  entity: null
+  notes: null
+  run_id: null
   mode: disabled

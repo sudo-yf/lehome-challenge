@@ -75,11 +75,18 @@ wandb_load_env() {
     WANDB_ENTITY="${WANDB_ENTITY:-}"
     WANDB_NOTES="${WANDB_NOTES:-}"
     WANDB_RUN_ID="${WANDB_RUN_ID:-}"
+    WANDB_DATA_DIR="${WANDB_DATA_DIR:-/root/data/.cache/wandb-data}"
+    WANDB_ARTIFACT_DIR="${WANDB_ARTIFACT_DIR:-/root/data/.cache/wandb-artifacts}"
+    TMPDIR="${TMPDIR:-/root/data/.cache/tmp}"
+    mkdir -p "$WANDB_DATA_DIR" "$WANDB_ARTIFACT_DIR" "$TMPDIR"
 
     export WANDB_ENABLE
     export WANDB_DISABLE_ARTIFACT
     export WANDB_MODE
     export WANDB_PROJECT
+    export WANDB_DATA_DIR
+    export WANDB_ARTIFACT_DIR
+    export TMPDIR
 
     if [[ -n "$WANDB_ENTITY" ]]; then
         export WANDB_ENTITY

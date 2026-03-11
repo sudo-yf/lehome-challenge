@@ -118,7 +118,10 @@ policy:
       shape: [12]
 
 # 训练参数
-output_dir: outputs/train/top_long/xvla_base_3w_steps_final
+output_dir: outputs/train/top_long/xvla_base_3w_steps
+# XVLA 必须保持 policy training preset；若需自定义 LR / 调度，请修改
+# policy.optimizer_* 与 policy.scheduler_*，不要再走顶层 optimizer / scheduler。
+use_policy_training_preset: true
 batch_size: 8
 steps: 30000
 save_freq: 5000
@@ -126,22 +129,11 @@ eval_freq: 5000
 log_freq: 1000
 save_checkpoint: true
 
-optimizer:
-  type: xvla-adamw
-  lr: 2e-5
-  weight_decay: 1e-4
-  betas: [0.9, 0.999]
-  eps: 1e-8
-  grad_clip_norm: 10.0
-
-scheduler:
-  type: cosine_decay_with_warmup
-  num_warmup_steps: 1000
-  num_decay_steps: 29000
-  peak_lr: 2e-5
-  decay_lr: 0.0
-
 wandb:
   enable: false
+  disable_artifact: false
   project: lehome_xvla
+  entity: null
+  notes: null
+  run_id: null
   mode: disabled

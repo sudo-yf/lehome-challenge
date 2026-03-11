@@ -22,6 +22,10 @@ export TORCH_HOME="${TORCH_HOME:-$TORCH_CACHE_ROOT}"
 
 activate_venv
 
+if [[ -z "${PYTORCH_CUDA_ALLOC_CONF:-}" ]]; then
+    export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
+fi
+
 MODEL="${1:-act}"
 if [[ $# -gt 0 ]]; then
     shift
@@ -183,6 +187,7 @@ kv "Model" "$MODEL"
 kv "Config" "$RUN_CONFIG"
 kv "Output dir" "$CFG_OUTPUT_DIR"
 kv "Log file" "logs/$LOG_NAME"
+kv "CUDA alloc conf" "$PYTORCH_CUDA_ALLOC_CONF"
 if [[ -n "$AUTO_OUTPUT_DIR" ]]; then
     warn "⚠️ 原目录已存在，自动顺延到: $AUTO_OUTPUT_DIR"
 fi

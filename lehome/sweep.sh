@@ -22,14 +22,16 @@ Environment defaults:
 Supported env helpers:
   WANDB_PROJECT / WANDB_ENTITY / WANDB_NOTES / WANDB_API_KEY / WANDB_BASE_URL
   WANDB_DISABLE_ARTIFACT=true|false
-  MODEL / JOB_NAME / SWEEP_NAME / SWEEP_STEPS / SWEEP_METHOD / SWEEP_COUNT / SWEEP_MIN_ITER
-  SWEEP_METRIC_NAME / SWEEP_METRIC_GOAL / SWEEP_CONFIG_PATH
+  MODEL / JOB_NAME / SWEEP_NAME / SWEEP_STEPS / SWEEP_METHOD / SWEEP_COUNT / SWEEP_MIN_ITER / TRAIN_CONFIG_PATH
+  SWEEP_METRIC_NAME / SWEEP_METRIC_GOAL / SWEEP_CONFIG_PATH / SWEEP_ID
   CREATE_ONLY=true|false / DRY_RUN=true|false / PRECHECK=true|false
 
 Examples:
   PRECHECK=true WANDB_ENV_FILE=/root/data/wandb.md bash lehome/sweep.sh --model xvla
-  WANDB_API_KEY=*** bash lehome/sweep.sh --model xvla --count 8 --steps 1000
+  DRY_RUN=true SWEEP_CONFIG_PATH=configs/sweeps/xvla_stage2.yaml bash lehome/sweep.sh --model xvla --steps 100
   WANDB_API_KEY=*** CREATE_ONLY=true bash lehome/sweep.sh --model xvla --steps 3000
+  WANDB_API_KEY=*** bash lehome/sweep.sh --model xvla --sweep-id <existing_sweep_id> --count 4
+  TRAIN_CONFIG_PATH=configs/train_xvla_30k_better_than_baseline.yaml SWEEP_CONFIG_PATH=configs/sweeps/xvla_wandb_eval_narrow.yaml bash lehome/sweep.sh --model xvla --dry-run
   DRY_RUN=true bash lehome/sweep.sh --model xvla --steps 1000 -- --job_name=xvla_sweep_top_long
 USAGE
 }
@@ -168,6 +170,10 @@ fi
 if [[ -n "${SWEEP_CONFIG_PATH:-}" ]]; then
     resolve_cmd+=(--config-file "$SWEEP_CONFIG_PATH")
     cmd+=(--config-file "$SWEEP_CONFIG_PATH")
+fi
+if [[ -n "${TRAIN_CONFIG_PATH:-}" ]]; then
+    resolve_cmd+=(--train-config "$TRAIN_CONFIG_PATH")
+    cmd+=(--train-config "$TRAIN_CONFIG_PATH")
 fi
 if [[ "$WANDB_DISABLE_ARTIFACT" == "true" ]]; then
     cmd+=(--disable-artifact)

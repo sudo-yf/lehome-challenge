@@ -114,6 +114,9 @@ class LeRobotPolicy(BasePolicy):
             batch_action = self.postprocessor(batch_action)
             
         # 5. Convert to Numpy (Remove batch dimension)
+        # Convert bfloat16 to float32 for numpy compatibility
+        if batch_action.dtype == torch.bfloat16:
+            batch_action = batch_action.float()
         return batch_action.squeeze(0).cpu().numpy()
 
     # --------------------------------------------------------------------------
@@ -185,12 +188,13 @@ class LeRobotPolicy(BasePolicy):
                 continue
 
             if isinstance(value, np.ndarray):
-                value_tensor = torch.from_numpy(value).float()
+                value_tensor = torch.from_numpy(value)
                 if value.ndim == 3 and value.shape[-1] == 3:  # Image: (H, W, C)
-                    # (H, W, C) -> (C, H, W), [0, 1] normalization
-                    value_tensor = value_tensor.permute(2, 0, 1) / 255.0
+                    # (H, W, C) -> (C, H, W), keep uint8 for preprocessor
+                    value_tensor = value_tensor.permute(2, 0, 1)
                     obs_for_preproc[key] = value_tensor.unsqueeze(0)  # Add batch dim
                 else:
+                    value_tensor = value_tensor.float()
                     obs_for_preproc[key] = value_tensor.unsqueeze(0)  # Add batch dim
             else:
                 obs_for_preproc[key] = value
