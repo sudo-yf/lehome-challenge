@@ -4,7 +4,8 @@
 
 | Version | Date | Commit | Notes |
 | --- | --- | --- | --- |
-| `vme50r` | `2026-03-10` | `66a4ec2` | Auto save vme50r |
+| `vxvlawandb` | `2026-03-11` | `09c0d54` | Auto save vxvlawandb |
+| `vme50r` | `2026-03-10` | `37f7750` | Auto save vme50r |
 | `vme50` | `2026-03-10` | `101a492` | Auto save version vme50 |
 | `vxvla` | `2026-03-10` | `3883827` | Auto save version vxvla |
 | `v2.0` | `2026-03-10` | `c362dac` | Auto save version v2.0 |
