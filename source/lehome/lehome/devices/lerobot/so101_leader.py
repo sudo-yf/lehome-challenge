@@ -2,7 +2,8 @@ import os
 import json
 from collections.abc import Callable
 from typing import Dict, Tuple
-from pynput.keyboard import Listener, Key
+# Lazy import pynput to avoid X display requirement during module import
+# from pynput.keyboard import Listener, Key
 
 from .common.motors import (
     FeetechMotorsBus,
@@ -60,6 +61,8 @@ class SO101Leader(Device):
         self._reset_state = False
         self._additional_callbacks = {}
 
+        # Lazy import pynput only when actually needed
+        from pynput.keyboard import Listener
         self.listener = Listener(on_press=self.on_press, on_release=self.on_release)
         self.listener.start()
         self._display_controls()
@@ -120,6 +123,7 @@ class SO101Leader(Device):
                     self._additional_callbacks["D"]()
         except AttributeError:
             # Handle special keys (like ESC)
+            from pynput.keyboard import Key
             if key == Key.esc and "ESCAPE" in self._additional_callbacks:
                 if self.other_key_enable == True:
                     self._additional_callbacks["ESCAPE"]()
