@@ -114,6 +114,9 @@ class LeRobotPolicy(BasePolicy):
             batch_action = self.postprocessor(batch_action)
             
         # 5. Convert to Numpy (Remove batch dimension)
+        # Convert bfloat16 to float32 for numpy compatibility
+        if batch_action.dtype == torch.bfloat16:
+            batch_action = batch_action.float()
         return batch_action.squeeze(0).cpu().numpy()
 
     # --------------------------------------------------------------------------
